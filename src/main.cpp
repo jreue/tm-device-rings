@@ -17,6 +17,7 @@ bool phaseCompleted[NUM_PHASES] = {};
 
 // Game configuration
 const unsigned long MOVE_INTERVAL_MS = 80;
+const unsigned long MISS_HOLD_MS = 1500;
 const bool phaseClockwise[NUM_PHASES] = {true, false, true, false};
 
 // Game state
@@ -24,21 +25,20 @@ volatile bool buttonPressedFlag = false;
 int movingLedPos = 0;
 unsigned long lastMoveTime = 0;
 bool gameActive = false;
-bool showingMiss = false;
-unsigned long missTime = 0;
-const unsigned long MISS_HOLD_MS = 1500;
 
 bool isCalibrated();
 void setupESPNow();
 void setupLEDS();
 void setupButtons();
 void initGame();
+void runGameLoop();
+void renderGameFrame();
 void startPhase(int phase);
 void advancePhase();
-void runGameLoop();
-void renderGame();
 bool isHit();
-void showHit();
+int getNextLEDPosition();
+void playHitEffects();
+void playMissEffects();
 void playCalibratedEffects();
 
 void handlePlayer1ButtonPressed(void* button_handle, void* usr_data);
@@ -94,37 +94,46 @@ void initGame() {
   startPhase(0);
 }
 
-void startPhase(int phase) {
-  Serial.printf("Starting phase %d (%s)\n", phase,
-                phaseClockwise[phase] ? "clockwise" : "counter-clockwise");
-  movingLedPos = LED_12_OCLOCK;
-  buttonPressedFlag = false;
-  showingMiss = false;
-  lastMoveTime = millis();
-  gameActive = true;
-  renderGame();
+void runGameLoop() {
+  if (!gameActive)
+    return;
+
+  if (buttonPressedFlag) {
+    buttonPressedFlag = false;
+    if (isHit()) {
+      playHitEffects();
+      advancePhase();
+      return;
+    } else {
+      playMissEffects();
+      lastMoveTime = millis();
+      return;
+    }
+  }
+
+  unsigned long now = millis();
+  if (now - lastMoveTime >= MOVE_INTERVAL_MS) {
+    lastMoveTime = now;
+    movingLedPos = getNextLEDPosition();
+    renderGameFrame();
+  }
 }
 
-void renderGame() {
+void renderGameFrame() {
   FastLED.clear();
   leds[LED_6_OCLOCK] = CRGB::Yellow;
   leds[movingLedPos] = CRGB::Blue;
   FastLED.show();
 }
 
-void showHit() {
-  for (int flash = 0; flash < 3; flash++) {
-    FastLED.clear();
-    leds[LED_6_OCLOCK] = CRGB::Green;
-    FastLED.show();
-    delay(200);
-    FastLED.clear(true);
-    delay(150);
-  }
-}
-
-bool isHit() {
-  return movingLedPos == LED_6_OCLOCK;
+void startPhase(int phase) {
+  Serial.printf("Starting phase %d (%s)\n", phase,
+                phaseClockwise[phase] ? "clockwise" : "counter-clockwise");
+  movingLedPos = LED_12_OCLOCK;
+  buttonPressedFlag = false;
+  lastMoveTime = millis();
+  gameActive = true;
+  renderGameFrame();
 }
 
 void advancePhase() {
@@ -137,47 +146,35 @@ void advancePhase() {
   }
 }
 
-void runGameLoop() {
-  if (!gameActive)
-    return;
+bool isHit() {
+  return movingLedPos == LED_6_OCLOCK;
+}
 
-  if (showingMiss) {
-    if (millis() - missTime >= MISS_HOLD_MS) {
-      showingMiss = false;
-      lastMoveTime = millis();
-      buttonPressedFlag = false;
-      renderGame();
-    }
-    return;
+int getNextLEDPosition() {
+  if (phaseClockwise[currentPhase]) {
+    return (movingLedPos + 1) % NUM_RING_LEDS;
+  } else {
+    return (movingLedPos - 1 + NUM_RING_LEDS) % NUM_RING_LEDS;
   }
+}
 
-  if (buttonPressedFlag) {
-    buttonPressedFlag = false;
-    if (isHit()) {
-      showHit();
-      advancePhase();
-      return;
-    } else {
-      showingMiss = true;
-      missTime = millis();
-      FastLED.clear();
-      leds[LED_6_OCLOCK] = CRGB::Yellow;
-      leds[movingLedPos] = CRGB::Red;
-      FastLED.show();
-      return;
-    }
+void playHitEffects() {
+  for (int flash = 0; flash < 3; flash++) {
+    FastLED.clear();
+    leds[LED_6_OCLOCK] = CRGB::Green;
+    FastLED.show();
+    delay(200);
+    FastLED.clear(true);
+    delay(150);
   }
+}
 
-  unsigned long now = millis();
-  if (now - lastMoveTime >= MOVE_INTERVAL_MS) {
-    lastMoveTime = now;
-    if (phaseClockwise[currentPhase]) {
-      movingLedPos = (movingLedPos + 1) % NUM_RING_LEDS;
-    } else {
-      movingLedPos = (movingLedPos - 1 + NUM_RING_LEDS) % NUM_RING_LEDS;
-    }
-    renderGame();
-  }
+void playMissEffects() {
+  FastLED.clear();
+  leds[LED_6_OCLOCK] = CRGB::Yellow;
+  leds[movingLedPos] = CRGB::Red;
+  FastLED.show();
+  delay(MISS_HOLD_MS);
 }
 
 void playCalibratedEffects() {
