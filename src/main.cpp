@@ -121,8 +121,8 @@ void runGameLoop() {
 
 void renderGameFrame() {
   FastLED.clear();
-  leds[LED_6_OCLOCK] = CRGB::Yellow;
-  leds[movingLedPos] = CRGB::Blue;
+  leds[LED_6_OCLOCK] = LED_TARGET_COLOR;
+  leds[movingLedPos] = LED_CURRENT_COLOR;
   FastLED.show();
 }
 
@@ -161,7 +161,7 @@ int getNextLEDPosition() {
 void playHitEffects() {
   for (int flash = 0; flash < 3; flash++) {
     FastLED.clear();
-    leds[LED_6_OCLOCK] = CRGB::Green;
+    leds[LED_6_OCLOCK] = LED_HIT_COLOR;
     FastLED.show();
     delay(200);
     FastLED.clear(true);
@@ -171,8 +171,8 @@ void playHitEffects() {
 
 void playMissEffects() {
   FastLED.clear();
-  leds[LED_6_OCLOCK] = CRGB::Yellow;
-  leds[movingLedPos] = CRGB::Red;
+  leds[LED_6_OCLOCK] = LED_TARGET_COLOR;
+  leds[movingLedPos] = LED_MISS_COLOR;
   FastLED.show();
   delay(MISS_HOLD_MS);
 }
@@ -180,11 +180,14 @@ void playMissEffects() {
 void playCalibratedEffects() {
   gameActive = false;
   Serial.println("Game complete!");
-  for (int flash = 0; flash < 3; flash++) {
-    fill_solid(leds, NUM_LEDS, CRGB::Green);
+  unsigned long start = millis();
+  while (millis() - start < 3000) {
+    for (int i = 0; i < 5; i++) {
+      leds[random(NUM_LEDS)] = CHSV(random(256), 255, 255);
+    }
     FastLED.show();
-    delay(300);
-    FastLED.clear(true);
-    delay(200);
+    delay(50);
+    fadeToBlackBy(leds, NUM_LEDS, 80);
   }
+  FastLED.clear(true);
 }
