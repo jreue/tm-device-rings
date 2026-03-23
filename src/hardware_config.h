@@ -20,3 +20,7 @@
 // LED Configuration
 // ====================
 #define LED_RING_PIN GPIO_NUM_14
+
+// Ring positions (LED index 0 = 12 o'clock, increases clockwise)
+#define LED_12_OCLOCK 0
+#define LED_6_OCLOCK (NUM_RING_LEDS / 2)
