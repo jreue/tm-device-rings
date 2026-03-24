@@ -16,7 +16,7 @@ int currentPhase = 0;
 bool phaseCompleted[NUM_PHASES] = {};
 
 // Phase types
-enum MarkerType { INDEPENDENT, COLLECTIVE };
+enum MarkerType { SOLO, COLLECTIVE };
 
 #if NUM_PLAYERS == 2
 #include "patterns_2p.h"
@@ -43,9 +43,9 @@ const unsigned long HIT_EFFECT_TOTAL_MS =
 // Patterns defined in patterns.h
 
 const PhaseConfig phases[NUM_PHASES] = {
-    {INDEPENDENT, false, nullptr, 80},
+    {SOLO, false, nullptr, 80},
     {COLLECTIVE, false, &PATTERN_WEAVE, 80},
-    {INDEPENDENT, true, nullptr, 50},
+    {SOLO, true, nullptr, 50},
     {COLLECTIVE, false, &PATTERN_WAVES_LOOP, 80},
 };
 
@@ -83,7 +83,7 @@ void logPhase(int phase);
 void startPhase(int phase);
 void advancePhase();
 
-bool isIndependentMarker();
+bool isSoloMarker();
 bool isCollectiveMarker();
 bool isHit(int player);
 bool isPhaseComplete();
@@ -159,8 +159,8 @@ void runGameLoop() {
           playerCurrentState[p] = STATE_HIT;
           playerEffectStartTime[p] = millis();
         } else {
-          playerMissedPos[p] = (isIndependentMarker()) ? p * NUM_RING_LEDS + playerMarkerPos[p]
-                                                       : collectiveMarkerPos;
+          playerMissedPos[p] =
+              (isSoloMarker()) ? p * NUM_RING_LEDS + playerMarkerPos[p] : collectiveMarkerPos;
           playerCurrentState[p] = STATE_MISS;
           playerEffectStartTime[p] = millis();
         }
@@ -215,7 +215,7 @@ void renderGameFrame() {
     switch (playerCurrentState[p]) {
       case STATE_NORMAL:
         leds[targetPos] = LED_TARGET_COLOR;
-        if (isIndependentMarker()) {
+        if (isSoloMarker()) {
           leds[offset + playerMarkerPos[p]] = LED_MARKER_COLOR;
         }
         break;
@@ -243,7 +243,7 @@ void renderGameFrame() {
 }
 
 void advanceMarkers() {
-  if (isIndependentMarker()) {
+  if (isSoloMarker()) {
     for (int p = 0; p < NUM_PLAYERS; p++) {
       if (playerCurrentState[p] == STATE_NORMAL) {
         playerMarkerPos[p] = getNextMarkerPos(p);
@@ -266,7 +266,7 @@ void advanceMarkers() {
 void logPhase(int phase) {
   Serial.printf("→ Phase %d: %s, %s\n", phase,
                 phases[phase].clockwise ? "clockwise" : "counter-clockwise",
-                phases[phase].type == INDEPENDENT ? "independent" : "collective");
+                phases[phase].type == SOLO ? "solo" : "collective");
 }
 
 void startPhase(int phase) {
@@ -299,8 +299,8 @@ void advancePhase() {
   }
 }
 
-bool isIndependentMarker() {
-  return phases[currentPhase].type == INDEPENDENT;
+bool isSoloMarker() {
+  return phases[currentPhase].type == SOLO;
 }
 
 bool isCollectiveMarker() {
@@ -308,11 +308,11 @@ bool isCollectiveMarker() {
 }
 
 int getMarkerPos(int player) {
-  return isIndependentMarker() ? playerMarkerPos[player] : collectiveMarkerPos;
+  return isSoloMarker() ? playerMarkerPos[player] : collectiveMarkerPos;
 }
 
 int getTargetPos(int player) {
-  return isIndependentMarker() ? LED_6_OCLOCK : player * NUM_RING_LEDS + LED_6_OCLOCK;
+  return isSoloMarker() ? LED_6_OCLOCK : player * NUM_RING_LEDS + LED_6_OCLOCK;
 }
 
 int getNextMarkerPos(int p) {
