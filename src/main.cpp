@@ -18,9 +18,12 @@ bool phaseCompleted[NUM_PHASES] = {};
 // Phase types
 enum MarkerType { INDEPENDENT, COLLECTIVE };
 
+#include "patterns.h"
+
 struct PhaseConfig {
     bool clockwise;
     MarkerType type;
+    const MarkerPattern* pattern;  // nullptr = default sequential
 };
 
 // Game configuration
@@ -32,11 +35,13 @@ const int HIT_FLASH_COUNT = 3;
 const unsigned long HIT_EFFECT_TOTAL_MS =
     (unsigned long)HIT_FLASH_COUNT * (HIT_FLASH_ON_MS + HIT_FLASH_OFF_MS);
 
+// Patterns defined in patterns.h
+
 const PhaseConfig phases[NUM_PHASES] = {
-    {true, INDEPENDENT},
-    {false, COLLECTIVE},
-    {true, INDEPENDENT},
-    {false, COLLECTIVE},
+    {true, INDEPENDENT, nullptr},
+    {false, COLLECTIVE, nullptr},
+    {true, INDEPENDENT, nullptr},
+    {false, COLLECTIVE, &PATTERN_INFINITY},
 };
 
 const int STATE_NORMAL = 0;
@@ -54,6 +59,7 @@ bool playerPhaseCompleted[NUM_PLAYERS] = {};
 int playerMarkerPos[NUM_PLAYERS] = {};
 int playerMissedPos[NUM_PLAYERS] = {};
 int collectiveMarkerPos = 0;
+int collectivePatternIndex = 0;
 
 unsigned long playerEffectStartTime[NUM_PLAYERS] = {};
 
@@ -239,7 +245,16 @@ void advanceMarkers() {
       }
     }
   } else {
-    collectiveMarkerPos = getNextMarkerPos();
+    const MarkerPattern* pattern = phases[currentPhase].pattern;
+    if (pattern) {
+      collectivePatternIndex =
+          phases[currentPhase].clockwise
+              ? (collectivePatternIndex + 1) % pattern->length
+              : (collectivePatternIndex - 1 + pattern->length) % pattern->length;
+      collectiveMarkerPos = pgm_read_byte(&pattern->leds[collectivePatternIndex]);
+    } else {
+      collectiveMarkerPos = getNextMarkerPos();
+    }
   }
 }
 
@@ -259,7 +274,9 @@ void startPhase(int phase) {
     playerEffectStartTime[p] = 0;
     playerButtonPressed[p] = false;
   }
-  collectiveMarkerPos = LED_12_OCLOCK;
+  collectivePatternIndex = 0;
+  const MarkerPattern* pat = phases[phase].pattern;
+  collectiveMarkerPos = pat ? pgm_read_byte(&pat->leds[0]) : LED_12_OCLOCK;
   lastMarkerMoveTime = millis();
   gameActive = true;
 
