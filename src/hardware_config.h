@@ -1,6 +1,6 @@
 #pragma once
 
-#define NUM_PLAYERS 2
+#define NUM_PLAYERS 3
 #define NUM_PHASES 4
 
 #define NUM_RING_LEDS 24
@@ -14,8 +14,9 @@
 // ====================
 // Button Configuration
 // ====================
-#define BUTTON_1_PIN GPIO_NUM_5
-#define BUTTON_2_PIN GPIO_NUM_17
+#define BUTTON_1_PIN GPIO_NUM_18
+#define BUTTON_2_PIN GPIO_NUM_5
+#define BUTTON_3_PIN GPIO_NUM_17
 
 // ====================
 // LED Configuration

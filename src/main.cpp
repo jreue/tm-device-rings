@@ -18,7 +18,11 @@ bool phaseCompleted[NUM_PHASES] = {};
 // Phase types
 enum MarkerType { INDEPENDENT, COLLECTIVE };
 
+#if NUM_PLAYERS == 2
 #include "patterns_2p.h"
+#elif NUM_PLAYERS == 3
+#include "patterns_3p.h"
+#endif
 
 struct PhaseConfig {
     bool clockwise;
@@ -39,9 +43,9 @@ const unsigned long HIT_EFFECT_TOTAL_MS =
 
 const PhaseConfig phases[NUM_PHASES] = {
     {true, INDEPENDENT, nullptr},
-    {false, COLLECTIVE, &PATTERN_WAVES_LOOP},
-    {true, INDEPENDENT, nullptr},
     {false, COLLECTIVE, &PATTERN_INFINITY},
+    {true, INDEPENDENT, nullptr},
+    {false, COLLECTIVE, &PATTERN_WAVES_LOOP},
 };
 
 const int STATE_NORMAL = 0;
@@ -121,7 +125,7 @@ void setupLEDS() {
 }
 
 void setupButtons() {
-  const gpio_num_t buttonPins[NUM_PLAYERS] = {BUTTON_1_PIN, BUTTON_2_PIN};
+  const gpio_num_t buttonPins[NUM_PLAYERS] = {BUTTON_1_PIN, BUTTON_2_PIN, BUTTON_3_PIN};
   for (int i = 0; i < NUM_PLAYERS; i++) {
     Button* btn = new Button(buttonPins[i], false);
     btn->attachPressDownEventCb(&handleButtonPressed, (void*)(intptr_t)i);
