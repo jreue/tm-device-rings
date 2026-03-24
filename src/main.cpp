@@ -24,6 +24,8 @@ enum MarkerType { SOLO, COLLECTIVE };
 #include "patterns_3p.h"
 #elif NUM_PLAYERS == 4
 #include "patterns_4p.h"
+#elif NUM_PLAYERS == 5
+#include "patterns_5p.h"
 #endif
 
 struct PhaseConfig {
@@ -138,6 +140,11 @@ void setupButtons() {
   Serial.println("Setting up for 4 players");
   const gpio_num_t buttonPins[NUM_PLAYERS] = {BUTTON_1_PIN, BUTTON_2_PIN, BUTTON_3_PIN,
                                               BUTTON_4_PIN};
+#elif NUM_PLAYERS == 5
+  Serial.println("Setting up for 5 players");
+  const gpio_num_t buttonPins[NUM_PLAYERS] = {BUTTON_1_PIN, BUTTON_2_PIN, BUTTON_3_PIN,
+                                              BUTTON_4_PIN, BUTTON_5_PIN};
+
 #endif
 
   for (int i = 0; i < NUM_PLAYERS; i++) {
