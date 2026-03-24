@@ -19,7 +19,7 @@ struct MarkerPattern {
 };
 
 const uint8_t PATTERN_WEAVE_LEDS[] PROGMEM = {
-    // R1-3 -> R1-3 CW
+    // R1-3 -> R1-9 CW
     6,
     7,
     8,
@@ -33,7 +33,7 @@ const uint8_t PATTERN_WEAVE_LEDS[] PROGMEM = {
     16,
     17,
     18,
-    // R2-3 -> R2-3 CW
+    // R2-3 -> R2-3 CCW
     30,
     29,
     28,
@@ -59,7 +59,7 @@ const uint8_t PATTERN_WEAVE_LEDS[] PROGMEM = {
     32,
     31,
     30,
-    // R1-9 -> R1-3 CCW
+    // R1-9 -> R1-3 CW
     18,
     19,
     20,

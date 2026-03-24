@@ -3,10 +3,11 @@
 
 #include "hardware_config.h"
 
-// Patterns for 3-ring setup (72 LEDs total).
+// Patterns for 4-ring setup (96 LEDs total).
 // Ring 1 = LEDs 0-23
 // Ring 2 = LEDs 24-47
 // Ring 3 = LEDs 48-71
+// Ring 4 = LEDs 72-95
 
 // Clock positions per ring
 // 12 o'clock = 0
@@ -48,7 +49,7 @@ const uint8_t PATTERN_WEAVE_LEDS[] PROGMEM = {
     44,
     43,
     42,
-    // R3-3 -> R3-3 CW
+    // R3-3 -> R3-9 CW
     54,
     55,
     56,
@@ -61,6 +62,34 @@ const uint8_t PATTERN_WEAVE_LEDS[] PROGMEM = {
     63,
     64,
     65,
+    66,
+    // R4-3 -> R4-3 CCW
+    78,
+    77,
+    76,
+    75,
+    74,
+    73,
+    72,
+    95,
+    94,
+    93,
+    92,
+    91,
+    90,
+    89,
+    88,
+    87,
+    86,
+    85,
+    84,
+    83,
+    82,
+    81,
+    80,
+    79,
+    78,
+    // R3-9 -> R3-3 CW
     66,
     67,
     68,
@@ -132,7 +161,7 @@ const uint8_t PATTERN_WAVES_LOOP_LEDS[] PROGMEM = {
     40,
     41,
     42,
-    // R3-3 -> R3-3 CW
+    // R3-3 -> R3-9 CW
     54,
     55,
     56,
@@ -145,6 +174,34 @@ const uint8_t PATTERN_WAVES_LOOP_LEDS[] PROGMEM = {
     63,
     64,
     65,
+    66,
+    // R4-3 -> R4-3 CW
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    // R3-9 -> R3-3 CW
     66,
     67,
     68,
