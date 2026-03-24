@@ -59,7 +59,6 @@ unsigned long playerEffectStartTime[NUM_PLAYERS] = {};
 
 unsigned long lastMarkerMoveTime = 0;
 
-bool isCalibrated();
 void setupESPNow();
 void setupLEDS();
 void setupButtons();
@@ -68,22 +67,20 @@ void runGameLoop();
 void renderGameFrame();
 void startPhase(int phase);
 void advancePhase();
+
+bool isIndependentMarker();
+bool isCollectiveMarker();
 bool isHit(int player);
 bool isPhaseComplete();
-void advanceLEDs();
+bool isCalibrated();
+
+int getMarkerPos(int player);
+int getTargetPos(int player);
+
+void advanceMarkers();
 void playCalibratedEffects();
 
 void handleButtonPressed(void* button_handle, void* usr_data);
-
-// Returns true if all phases are completed
-bool isCalibrated() {
-  for (int i = 0; i < NUM_PHASES; i++) {
-    if (!phaseCompleted[i]) {
-      return false;
-    }
-  }
-  return true;
-}
 
 void setup() {
   Serial.begin(115200);
@@ -120,6 +117,7 @@ void setupButtons() {
 }
 
 void handleButtonPressed(void* button_handle, void* usr_data) {
+  Serial.printf("Button pressed for player %d\n", (int)(intptr_t)usr_data);
   int player = (int)(intptr_t)usr_data;
   playerButtonPressed[player] = true;
 }
@@ -134,7 +132,7 @@ void runGameLoop() {
   if (!gameActive)
     return;
 
-  // Iterate over players to check for button presses and update effects
+  // Iterate over players to transition into hit/miss states based on button presses
   for (int p = 0; p < NUM_PLAYERS; p++) {
     if (playerButtonPressed[p]) {
       playerButtonPressed[p] = false;
@@ -144,9 +142,8 @@ void runGameLoop() {
           playerCurrentState[p] = STATE_HIT;
           playerEffectStartTime[p] = millis();
         } else {
-          playerMissedPos[p] = (phases[currentPhase].type == INDEPENDENT)
-                                   ? p * NUM_RING_LEDS + playerMarkerPos[p]
-                                   : collectiveMarkerPos;
+          playerMissedPos[p] = (isIndependentMarker()) ? p * NUM_RING_LEDS + playerMarkerPos[p]
+                                                       : collectiveMarkerPos;
           playerCurrentState[p] = STATE_MISS;
           playerEffectStartTime[p] = millis();
         }
@@ -154,7 +151,7 @@ void runGameLoop() {
     }
   }
 
-  // Advance effect state transitions
+  // Iterate over players to transition out of hit/miss states based on timers
   for (int p = 0; p < NUM_PLAYERS; p++) {
     unsigned long elapsed = millis() - playerEffectStartTime[p];
     if (playerCurrentState[p] == STATE_HIT && elapsed >= HIT_EFFECT_TOTAL_MS) {
@@ -179,11 +176,11 @@ void runGameLoop() {
     }
   }
 
-  // Advance LEDs on timer
+  // Advance Marker(s) on timer
   unsigned long now = millis();
   if (now - lastMarkerMoveTime >= MOVE_INTERVAL_MS) {
     lastMarkerMoveTime = now;
-    advanceLEDs();
+    advanceMarkers();
   }
 
   renderGameFrame();
@@ -198,7 +195,9 @@ void renderGameFrame() {
     switch (playerCurrentState[p]) {
       case STATE_NORMAL:
         leds[targetPos] = LED_TARGET_COLOR;
-        leds[offset + playerMarkerPos[p]] = LED_CURRENT_COLOR;
+        if (isIndependentMarker()) {
+          leds[offset + playerMarkerPos[p]] = LED_CURRENT_COLOR;
+        }
         break;
       case STATE_HIT: {
         unsigned long cycle = HIT_FLASH_ON_MS + HIT_FLASH_OFF_MS;
@@ -215,7 +214,7 @@ void renderGameFrame() {
     }
   }
   // Collective moving LED overlaid on top
-  if (phases[currentPhase].type == COLLECTIVE) {
+  if (isCollectiveMarker()) {
     leds[collectiveMarkerPos] = LED_CURRENT_COLOR;
   }
   FastLED.show();
@@ -224,7 +223,7 @@ void renderGameFrame() {
 void startPhase(int phase) {
   Serial.printf("Starting phase %d (%s, %s)\n", phase,
                 phases[phase].clockwise ? "clockwise" : "counter-clockwise",
-                phases[phase].type == INDEPENDENT ? "independent" : "collective");
+                isIndependentMarker() ? "independent" : "collective");
   for (int p = 0; p < NUM_PLAYERS; p++) {
     playerMarkerPos[p] = LED_12_OCLOCK;
     playerPhaseCompleted[p] = false;
@@ -248,14 +247,27 @@ void advancePhase() {
   }
 }
 
-bool isHit(int player) {
-  if (phases[currentPhase].type == INDEPENDENT) {
-    return playerMarkerPos[player] == LED_6_OCLOCK;
-  } else {
-    return collectiveMarkerPos == player * NUM_RING_LEDS + LED_6_OCLOCK;
-  }
+bool isIndependentMarker() {
+  return phases[currentPhase].type == INDEPENDENT;
 }
 
+bool isCollectiveMarker() {
+  return phases[currentPhase].type == COLLECTIVE;
+}
+
+int getMarkerPos(int player) {
+  return isIndependentMarker() ? playerMarkerPos[player] : collectiveMarkerPos;
+}
+
+int getTargetPos(int player) {
+  return isIndependentMarker() ? LED_6_OCLOCK : player * NUM_RING_LEDS + LED_6_OCLOCK;
+}
+
+bool isHit(int player) {
+  return getMarkerPos(player) == getTargetPos(player);
+}
+
+// Returns true if all players have completed their current phase
 bool isPhaseComplete() {
   for (int p = 0; p < NUM_PLAYERS; p++) {
     if (!playerPhaseCompleted[p])
@@ -264,8 +276,18 @@ bool isPhaseComplete() {
   return true;
 }
 
-void advanceLEDs() {
-  if (phases[currentPhase].type == INDEPENDENT) {
+// Returns true if all phases are completed
+bool isCalibrated() {
+  for (int i = 0; i < NUM_PHASES; i++) {
+    if (!phaseCompleted[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void advanceMarkers() {
+  if (isIndependentMarker()) {
     for (int p = 0; p < NUM_PLAYERS; p++) {
       if (playerCurrentState[p] == STATE_NORMAL) {
         playerMarkerPos[p] = phases[currentPhase].clockwise
