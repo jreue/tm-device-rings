@@ -194,10 +194,13 @@ void runGameLoop() {
 
 void renderGameFrame() {
   FastLED.clear();
+
+  // Iterate over players to render target, marker, and hit/miss effects
   for (int p = 0; p < NUM_PLAYERS; p++) {
     int offset = p * NUM_RING_LEDS;
     int targetPos = offset + LED_6_OCLOCK;
     unsigned long elapsed = millis() - playerEffectStartTime[p];
+
     switch (playerCurrentState[p]) {
       case STATE_NORMAL:
         leds[targetPos] = LED_TARGET_COLOR;
@@ -219,10 +222,12 @@ void renderGameFrame() {
         break;
     }
   }
+
   // Collective moving LED overlaid on top
   if (isCollectiveMarker()) {
     leds[collectiveMarkerPos] = LED_MARKER_COLOR;
   }
+
   FastLED.show();
 }
 
