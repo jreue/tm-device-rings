@@ -103,7 +103,7 @@ const MarkerPattern PATTERN_INFINITY = {PATTERN_INFINITY_LEDS, sizeof(PATTERN_IN
 // Waves loop: R1 partial (3→9), full loop R2, full loop R3, R2 partial (9→3), R1 partial (9→3).
 // Waypoints: R1·3, R1·9 → R2·3 (full) → R3·3 (full) → R2·9, R2·3 → R1·9, R1·3
 const uint8_t PATTERN_WAVES_LOOP_LEDS[] PROGMEM = {
-    // R1: CW from 3 o'clock to 9 o'clock
+    // R1-3 → R1-9 CW
     6,
     7,
     8,
@@ -117,7 +117,7 @@ const uint8_t PATTERN_WAVES_LOOP_LEDS[] PROGMEM = {
     16,
     17,
     18,
-    // jump to R2 at 3 o'clock, CW full loop back to just before 3
+    // R2-3 -> R2-9 CW
     30,
     31,
     32,
@@ -131,18 +131,7 @@ const uint8_t PATTERN_WAVES_LOOP_LEDS[] PROGMEM = {
     40,
     41,
     42,
-    43,
-    44,
-    45,
-    46,
-    47,
-    24,
-    25,
-    26,
-    27,
-    28,
-    29,
-    // jump to R3 at 3 o'clock, CW full loop back to just before 3
+    // R3-3 -> R3-3 CW
     54,
     55,
     56,
@@ -167,7 +156,8 @@ const uint8_t PATTERN_WAVES_LOOP_LEDS[] PROGMEM = {
     51,
     52,
     53,
-    // jump to R2 at 9 o'clock, CW partial back to just before 3
+    54,
+    // R2-9 -> R2-3 CW
     42,
     43,
     44,
@@ -180,7 +170,8 @@ const uint8_t PATTERN_WAVES_LOOP_LEDS[] PROGMEM = {
     27,
     28,
     29,
-    // jump to R1 at 9 o'clock, CW partial back to just before 3
+    30,
+    // R1-9 -> R1-3 CW
     18,
     19,
     20,
