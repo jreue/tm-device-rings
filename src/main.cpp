@@ -25,13 +25,14 @@ enum MarkerType { INDEPENDENT, COLLECTIVE };
 #endif
 
 struct PhaseConfig {
-    bool clockwise;
     MarkerType type;
+    bool clockwise;
+
     const MarkerPattern* pattern;  // nullptr = default sequential
+    unsigned long speed;           // marker move interval in ms
 };
 
 // Game configuration
-const unsigned long MOVE_INTERVAL_MS = 80;
 const unsigned long MISS_HOLD_MS = 1500;
 const unsigned long HIT_FLASH_ON_MS = 200;
 const unsigned long HIT_FLASH_OFF_MS = 150;
@@ -42,10 +43,10 @@ const unsigned long HIT_EFFECT_TOTAL_MS =
 // Patterns defined in patterns.h
 
 const PhaseConfig phases[NUM_PHASES] = {
-    {true, INDEPENDENT, nullptr},
-    {false, COLLECTIVE, &PATTERN_WEAVE},
-    {true, INDEPENDENT, nullptr},
-    {false, COLLECTIVE, &PATTERN_WAVES_LOOP},
+    {INDEPENDENT, false, nullptr, 80},
+    {COLLECTIVE, false, &PATTERN_WEAVE, 80},
+    {INDEPENDENT, true, nullptr, 50},
+    {COLLECTIVE, false, &PATTERN_WAVES_LOOP, 80},
 };
 
 const int STATE_NORMAL = 0;
@@ -194,7 +195,7 @@ void runGameLoop() {
 
   // Advance Marker(s) on timer
   unsigned long now = millis();
-  if (now - lastMarkerMoveTime >= MOVE_INTERVAL_MS) {
+  if (now - lastMarkerMoveTime >= phases[currentPhase].speed) {
     lastMarkerMoveTime = now;
     advanceMarkers();
   }
