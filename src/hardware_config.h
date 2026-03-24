@@ -29,7 +29,7 @@
 #define LED_9_OCLOCK (NUM_RING_LEDS * 3 / 4)
 
 // LED colors
-#define LED_TARGET_COLOR CRGB::Yellow
-#define LED_CURRENT_COLOR CRGB::Blue
+#define LED_TARGET_COLOR CRGB::Purple
+#define LED_MARKER_COLOR CRGB::Blue
 #define LED_HIT_COLOR CRGB::Green
 #define LED_MISS_COLOR CRGB::Red

@@ -196,7 +196,7 @@ void renderGameFrame() {
       case STATE_NORMAL:
         leds[targetPos] = LED_TARGET_COLOR;
         if (isIndependentMarker()) {
-          leds[offset + playerMarkerPos[p]] = LED_CURRENT_COLOR;
+          leds[offset + playerMarkerPos[p]] = LED_MARKER_COLOR;
         }
         break;
       case STATE_HIT: {
@@ -215,7 +215,7 @@ void renderGameFrame() {
   }
   // Collective moving LED overlaid on top
   if (isCollectiveMarker()) {
-    leds[collectiveMarkerPos] = LED_CURRENT_COLOR;
+    leds[collectiveMarkerPos] = LED_MARKER_COLOR;
   }
   FastLED.show();
 }
