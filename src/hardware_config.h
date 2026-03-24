@@ -20,6 +20,7 @@
 #define BUTTON_4_PIN GPIO_NUM_16
 #define BUTTON_5_PIN GPIO_NUM_4
 #define BUTTON_6_PIN GPIO_NUM_32
+#define BUTTON_7_PIN GPIO_NUM_33
 
 // ====================
 // LED Configuration
