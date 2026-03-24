@@ -18,7 +18,7 @@ bool phaseCompleted[NUM_PHASES] = {};
 // Phase types
 enum MarkerType { INDEPENDENT, COLLECTIVE };
 
-#include "patterns.h"
+#include "patterns_2p.h"
 
 struct PhaseConfig {
     bool clockwise;
