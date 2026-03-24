@@ -65,6 +65,10 @@ void setupButtons();
 void initGame();
 void runGameLoop();
 void renderGameFrame();
+
+void advanceMarkers();
+
+void logPhase(int phase);
 void startPhase(int phase);
 void advancePhase();
 
@@ -76,6 +80,8 @@ bool isCalibrated();
 
 int getMarkerPos(int player);
 int getTargetPos(int player);
+int getNextMarkerPos(int player);
+int getNextMarkerPos();
 
 void advanceMarkers();
 void playCalibratedEffects();
@@ -220,10 +226,27 @@ void renderGameFrame() {
   FastLED.show();
 }
 
-void startPhase(int phase) {
-  Serial.printf("Starting phase %d (%s, %s)\n", phase,
+void advanceMarkers() {
+  if (isIndependentMarker()) {
+    for (int p = 0; p < NUM_PLAYERS; p++) {
+      if (playerCurrentState[p] == STATE_NORMAL) {
+        playerMarkerPos[p] = getNextMarkerPos(p);
+      }
+    }
+  } else {
+    collectiveMarkerPos = getNextMarkerPos();
+  }
+}
+
+void logPhase(int phase) {
+  Serial.printf("→ Phase %d: %s, %s\n", phase,
                 phases[phase].clockwise ? "clockwise" : "counter-clockwise",
-                isIndependentMarker() ? "independent" : "collective");
+                phases[phase].type == INDEPENDENT ? "independent" : "collective");
+}
+
+void startPhase(int phase) {
+  logPhase(phase);
+
   for (int p = 0; p < NUM_PLAYERS; p++) {
     playerMarkerPos[p] = LED_12_OCLOCK;
     playerPhaseCompleted[p] = false;
@@ -234,12 +257,14 @@ void startPhase(int phase) {
   collectiveMarkerPos = LED_12_OCLOCK;
   lastMarkerMoveTime = millis();
   gameActive = true;
+
   renderGameFrame();
 }
 
 void advancePhase() {
   phaseCompleted[currentPhase] = true;
   currentPhase++;
+
   if (isCalibrated()) {
     playCalibratedEffects();
   } else {
@@ -263,6 +288,16 @@ int getTargetPos(int player) {
   return isIndependentMarker() ? LED_6_OCLOCK : player * NUM_RING_LEDS + LED_6_OCLOCK;
 }
 
+int getNextMarkerPos(int p) {
+  return phases[currentPhase].clockwise ? (playerMarkerPos[p] + 1) % NUM_RING_LEDS
+                                        : (playerMarkerPos[p] - 1 + NUM_RING_LEDS) % NUM_RING_LEDS;
+}
+
+int getNextMarkerPos() {
+  return phases[currentPhase].clockwise ? (collectiveMarkerPos + 1) % NUM_LEDS
+                                        : (collectiveMarkerPos - 1 + NUM_LEDS) % NUM_LEDS;
+}
+
 bool isHit(int player) {
   return getMarkerPos(player) == getTargetPos(player);
 }
@@ -284,22 +319,6 @@ bool isCalibrated() {
     }
   }
   return true;
-}
-
-void advanceMarkers() {
-  if (isIndependentMarker()) {
-    for (int p = 0; p < NUM_PLAYERS; p++) {
-      if (playerCurrentState[p] == STATE_NORMAL) {
-        playerMarkerPos[p] = phases[currentPhase].clockwise
-                                 ? (playerMarkerPos[p] + 1) % NUM_RING_LEDS
-                                 : (playerMarkerPos[p] - 1 + NUM_RING_LEDS) % NUM_RING_LEDS;
-      }
-    }
-  } else {
-    collectiveMarkerPos = phases[currentPhase].clockwise
-                              ? (collectiveMarkerPos + 1) % NUM_LEDS
-                              : (collectiveMarkerPos - 1 + NUM_LEDS) % NUM_LEDS;
-  }
 }
 
 void playCalibratedEffects() {
