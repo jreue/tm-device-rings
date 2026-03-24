@@ -16,11 +16,11 @@ int currentPhase = 0;
 bool phaseCompleted[NUM_PHASES] = {};
 
 // Phase types
-enum PhaseType { INDEPENDENT, SEQUENTIAL };
+enum MarkerType { INDEPENDENT, COLLECTIVE };
 
 struct PhaseConfig {
     bool clockwise;
-    PhaseType type;
+    MarkerType type;
 };
 
 // Game configuration
@@ -31,25 +31,33 @@ const unsigned long HIT_FLASH_OFF_MS = 150;
 const int HIT_FLASH_COUNT = 3;
 const unsigned long HIT_EFFECT_TOTAL_MS =
     (unsigned long)HIT_FLASH_COUNT * (HIT_FLASH_ON_MS + HIT_FLASH_OFF_MS);
+
 const PhaseConfig phases[NUM_PHASES] = {
     {true, INDEPENDENT},
-    {false, SEQUENTIAL},
+    {false, COLLECTIVE},
     {true, INDEPENDENT},
-    {false, SEQUENTIAL},
+    {false, COLLECTIVE},
 };
 
-enum PlayerEffectState { EFFECT_NONE, EFFECT_HIT, EFFECT_MISS, EFFECT_DONE };
+const int STATE_NORMAL = 0;
+const int STATE_HIT = 1;
+const int STATE_MISS = 2;
+const int STATE_DONE = 3;
 
 // Game state
-volatile bool buttonPressed[NUM_PLAYERS] = {};
-int playerMovingLed[NUM_PLAYERS] = {};
-int sequentialLedPos = 0;
-bool playerPhaseComplete[NUM_PLAYERS] = {};
-PlayerEffectState playerEffect[NUM_PLAYERS] = {};
-unsigned long playerEffectStart[NUM_PLAYERS] = {};
-int playerMissedLed[NUM_PLAYERS] = {};
-unsigned long lastMoveTime = 0;
 bool gameActive = false;
+
+volatile bool playerButtonPressed[NUM_PLAYERS] = {};
+int playerCurrentState[NUM_PLAYERS] = {};
+bool playerPhaseCompleted[NUM_PLAYERS] = {};
+
+int playerMarkerPos[NUM_PLAYERS] = {};
+int playerMissedPos[NUM_PLAYERS] = {};
+int collectiveMarkerPos = 0;
+
+unsigned long playerEffectStartTime[NUM_PLAYERS] = {};
+
+unsigned long lastMarkerMoveTime = 0;
 
 bool isCalibrated();
 void setupESPNow();
@@ -113,7 +121,7 @@ void setupButtons() {
 
 void handleButtonPressed(void* button_handle, void* usr_data) {
   int player = (int)(intptr_t)usr_data;
-  buttonPressed[player] = true;
+  playerButtonPressed[player] = true;
 }
 
 void initGame() {
@@ -126,21 +134,21 @@ void runGameLoop() {
   if (!gameActive)
     return;
 
-  // Handle button presses
+  // Iterate over players to check for button presses and update effects
   for (int p = 0; p < NUM_PLAYERS; p++) {
-    if (buttonPressed[p]) {
-      buttonPressed[p] = false;
-      if (playerEffect[p] == EFFECT_NONE) {
+    if (playerButtonPressed[p]) {
+      playerButtonPressed[p] = false;
+      if (playerCurrentState[p] == STATE_NORMAL) {
         if (isHit(p)) {
-          playerPhaseComplete[p] = true;
-          playerEffect[p] = EFFECT_HIT;
-          playerEffectStart[p] = millis();
+          playerPhaseCompleted[p] = true;
+          playerCurrentState[p] = STATE_HIT;
+          playerEffectStartTime[p] = millis();
         } else {
-          playerMissedLed[p] = (phases[currentPhase].type == INDEPENDENT)
-                                   ? p * NUM_RING_LEDS + playerMovingLed[p]
-                                   : sequentialLedPos;
-          playerEffect[p] = EFFECT_MISS;
-          playerEffectStart[p] = millis();
+          playerMissedPos[p] = (phases[currentPhase].type == INDEPENDENT)
+                                   ? p * NUM_RING_LEDS + playerMarkerPos[p]
+                                   : collectiveMarkerPos;
+          playerCurrentState[p] = STATE_MISS;
+          playerEffectStartTime[p] = millis();
         }
       }
     }
@@ -148,11 +156,11 @@ void runGameLoop() {
 
   // Advance effect state transitions
   for (int p = 0; p < NUM_PLAYERS; p++) {
-    unsigned long elapsed = millis() - playerEffectStart[p];
-    if (playerEffect[p] == EFFECT_HIT && elapsed >= HIT_EFFECT_TOTAL_MS) {
-      playerEffect[p] = EFFECT_DONE;
-    } else if (playerEffect[p] == EFFECT_MISS && elapsed >= MISS_HOLD_MS) {
-      playerEffect[p] = EFFECT_NONE;
+    unsigned long elapsed = millis() - playerEffectStartTime[p];
+    if (playerCurrentState[p] == STATE_HIT && elapsed >= HIT_EFFECT_TOTAL_MS) {
+      playerCurrentState[p] = STATE_DONE;
+    } else if (playerCurrentState[p] == STATE_MISS && elapsed >= MISS_HOLD_MS) {
+      playerCurrentState[p] = STATE_NORMAL;
     }
   }
 
@@ -160,7 +168,7 @@ void runGameLoop() {
   if (isPhaseComplete()) {
     bool allEffectsDone = true;
     for (int p = 0; p < NUM_PLAYERS; p++) {
-      if (playerEffect[p] == EFFECT_HIT) {
+      if (playerCurrentState[p] == STATE_HIT) {
         allEffectsDone = false;
         break;
       }
@@ -173,8 +181,8 @@ void runGameLoop() {
 
   // Advance LEDs on timer
   unsigned long now = millis();
-  if (now - lastMoveTime >= MOVE_INTERVAL_MS) {
-    lastMoveTime = now;
+  if (now - lastMarkerMoveTime >= MOVE_INTERVAL_MS) {
+    lastMarkerMoveTime = now;
     advanceLEDs();
   }
 
@@ -186,29 +194,29 @@ void renderGameFrame() {
   for (int p = 0; p < NUM_PLAYERS; p++) {
     int offset = p * NUM_RING_LEDS;
     int targetPos = offset + LED_6_OCLOCK;
-    unsigned long elapsed = millis() - playerEffectStart[p];
-    switch (playerEffect[p]) {
-      case EFFECT_NONE:
+    unsigned long elapsed = millis() - playerEffectStartTime[p];
+    switch (playerCurrentState[p]) {
+      case STATE_NORMAL:
         leds[targetPos] = LED_TARGET_COLOR;
-        leds[offset + playerMovingLed[p]] = LED_CURRENT_COLOR;
+        leds[offset + playerMarkerPos[p]] = LED_CURRENT_COLOR;
         break;
-      case EFFECT_HIT: {
+      case STATE_HIT: {
         unsigned long cycle = HIT_FLASH_ON_MS + HIT_FLASH_OFF_MS;
         leds[targetPos] = (elapsed % cycle < HIT_FLASH_ON_MS) ? LED_HIT_COLOR : CRGB::Black;
         break;
       }
-      case EFFECT_MISS:
+      case STATE_MISS:
         leds[targetPos] = LED_TARGET_COLOR;
-        leds[playerMissedLed[p]] = LED_MISS_COLOR;
+        leds[playerMissedPos[p]] = LED_MISS_COLOR;
         break;
-      case EFFECT_DONE:
+      case STATE_DONE:
         leds[targetPos] = LED_HIT_COLOR;
         break;
     }
   }
-  // Sequential moving LED overlaid on top
-  if (phases[currentPhase].type == SEQUENTIAL) {
-    leds[sequentialLedPos] = LED_CURRENT_COLOR;
+  // Collective moving LED overlaid on top
+  if (phases[currentPhase].type == COLLECTIVE) {
+    leds[collectiveMarkerPos] = LED_CURRENT_COLOR;
   }
   FastLED.show();
 }
@@ -216,16 +224,16 @@ void renderGameFrame() {
 void startPhase(int phase) {
   Serial.printf("Starting phase %d (%s, %s)\n", phase,
                 phases[phase].clockwise ? "clockwise" : "counter-clockwise",
-                phases[phase].type == INDEPENDENT ? "independent" : "sequential");
+                phases[phase].type == INDEPENDENT ? "independent" : "collective");
   for (int p = 0; p < NUM_PLAYERS; p++) {
-    playerMovingLed[p] = LED_12_OCLOCK;
-    playerPhaseComplete[p] = false;
-    playerEffect[p] = EFFECT_NONE;
-    playerEffectStart[p] = 0;
-    buttonPressed[p] = false;
+    playerMarkerPos[p] = LED_12_OCLOCK;
+    playerPhaseCompleted[p] = false;
+    playerCurrentState[p] = STATE_NORMAL;
+    playerEffectStartTime[p] = 0;
+    playerButtonPressed[p] = false;
   }
-  sequentialLedPos = LED_12_OCLOCK;
-  lastMoveTime = millis();
+  collectiveMarkerPos = LED_12_OCLOCK;
+  lastMarkerMoveTime = millis();
   gameActive = true;
   renderGameFrame();
 }
@@ -242,15 +250,15 @@ void advancePhase() {
 
 bool isHit(int player) {
   if (phases[currentPhase].type == INDEPENDENT) {
-    return playerMovingLed[player] == LED_6_OCLOCK;
+    return playerMarkerPos[player] == LED_6_OCLOCK;
   } else {
-    return sequentialLedPos == player * NUM_RING_LEDS + LED_6_OCLOCK;
+    return collectiveMarkerPos == player * NUM_RING_LEDS + LED_6_OCLOCK;
   }
 }
 
 bool isPhaseComplete() {
   for (int p = 0; p < NUM_PLAYERS; p++) {
-    if (!playerPhaseComplete[p])
+    if (!playerPhaseCompleted[p])
       return false;
   }
   return true;
@@ -259,16 +267,16 @@ bool isPhaseComplete() {
 void advanceLEDs() {
   if (phases[currentPhase].type == INDEPENDENT) {
     for (int p = 0; p < NUM_PLAYERS; p++) {
-      if (playerEffect[p] == EFFECT_NONE) {
-        playerMovingLed[p] = phases[currentPhase].clockwise
-                                 ? (playerMovingLed[p] + 1) % NUM_RING_LEDS
-                                 : (playerMovingLed[p] - 1 + NUM_RING_LEDS) % NUM_RING_LEDS;
+      if (playerCurrentState[p] == STATE_NORMAL) {
+        playerMarkerPos[p] = phases[currentPhase].clockwise
+                                 ? (playerMarkerPos[p] + 1) % NUM_RING_LEDS
+                                 : (playerMarkerPos[p] - 1 + NUM_RING_LEDS) % NUM_RING_LEDS;
       }
     }
   } else {
-    sequentialLedPos = phases[currentPhase].clockwise
-                           ? (sequentialLedPos + 1) % NUM_LEDS
-                           : (sequentialLedPos - 1 + NUM_LEDS) % NUM_LEDS;
+    collectiveMarkerPos = phases[currentPhase].clockwise
+                              ? (collectiveMarkerPos + 1) % NUM_LEDS
+                              : (collectiveMarkerPos - 1 + NUM_LEDS) % NUM_LEDS;
   }
 }
 
