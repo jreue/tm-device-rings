@@ -14,9 +14,8 @@ struct MarkerPattern {
     uint16_t length;
 };
 
-// Infinity: R3→R12 CW, M3→M9 CCW, L3 full CW loop, M9→M3 CCW, R9 full CW loop.
-const uint8_t PATTERN_INFINITY_LEDS[] PROGMEM = {
-    // R: CW from 3 o'clock to 9 o'clock
+const uint8_t PATTERN_WEAVE_LEDS[] PROGMEM = {
+    // R1-3 -> R1-3 CW
     6,
     7,
     8,
@@ -30,7 +29,7 @@ const uint8_t PATTERN_INFINITY_LEDS[] PROGMEM = {
     16,
     17,
     18,
-    // M: CCW from 3 o'clock to 9 o'clock (through 12)
+    // R2-3 -> R2-9 CCW
     30,
     29,
     28,
@@ -44,7 +43,7 @@ const uint8_t PATTERN_INFINITY_LEDS[] PROGMEM = {
     44,
     43,
     42,
-    // L: CW full loop from 3 o'clock back to 3 o'clock
+    // R3-3 -> R3-3 CW
     54,
     55,
     56,
@@ -69,7 +68,8 @@ const uint8_t PATTERN_INFINITY_LEDS[] PROGMEM = {
     51,
     52,
     53,
-    // M: CCW from 9 o'clock to 3 o'clock (through 6)
+    54,
+    // R2-9 -> R2-3 CCW
     42,
     41,
     40,
@@ -83,7 +83,7 @@ const uint8_t PATTERN_INFINITY_LEDS[] PROGMEM = {
     32,
     31,
     30,
-    // R: CW full loop from 9 o'clock back to 9 o'clock
+    // R1-9 -> R1-3 CW
     18,
     19,
     20,
@@ -96,12 +96,9 @@ const uint8_t PATTERN_INFINITY_LEDS[] PROGMEM = {
     3,
     4,
     5,
-    6,
 };
-const MarkerPattern PATTERN_INFINITY = {PATTERN_INFINITY_LEDS, sizeof(PATTERN_INFINITY_LEDS)};
+const MarkerPattern PATTERN_WEAVE = {PATTERN_WEAVE_LEDS, sizeof(PATTERN_WEAVE_LEDS)};
 
-// Waves loop: R1 partial (3→9), full loop R2, full loop R3, R2 partial (9→3), R1 partial (9→3).
-// Waypoints: R1·3, R1·9 → R2·3 (full) → R3·3 (full) → R2·9, R2·3 → R1·9, R1·3
 const uint8_t PATTERN_WAVES_LOOP_LEDS[] PROGMEM = {
     // R1-3 → R1-9 CW
     6,

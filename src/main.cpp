@@ -43,7 +43,7 @@ const unsigned long HIT_EFFECT_TOTAL_MS =
 
 const PhaseConfig phases[NUM_PHASES] = {
     {true, INDEPENDENT, nullptr},
-    {false, COLLECTIVE, &PATTERN_INFINITY},
+    {false, COLLECTIVE, &PATTERN_WEAVE},
     {true, INDEPENDENT, nullptr},
     {false, COLLECTIVE, &PATTERN_WAVES_LOOP},
 };
