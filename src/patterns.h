@@ -66,3 +66,63 @@ const uint8_t PATTERN_INFINITY_LEDS[] PROGMEM = {
     31,
 };
 const MarkerPattern PATTERN_INFINITY = {PATTERN_INFINITY_LEDS, sizeof(PATTERN_INFINITY_LEDS)};
+
+// Wave-loop: R3→R9 (CW), jump to L3, full CW loop of left ring back to L3,
+// jump to R9, CW back to R3.
+// Waypoints: R3,R6,R9 → L3,L6,L9,L12,L3 → R9,R12,R3
+const uint8_t PATTERN_WAVES_LOOP_LEDS[] PROGMEM = {
+    // R3 → R9 (CW on right ring)
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    // jump to L3, full CW loop back to L3
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    // jump to R9, CW back to R3
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+};
+const MarkerPattern PATTERN_WAVES_LOOP = {PATTERN_WAVES_LOOP_LEDS, sizeof(PATTERN_WAVES_LOOP_LEDS)};
