@@ -126,7 +126,14 @@ void setupLEDS() {
 }
 
 void setupButtons() {
+#if NUM_PLAYERS == 2
+  Serial.println("Setting up for 2 players");
+  const gpio_num_t buttonPins[NUM_PLAYERS] = {BUTTON_1_PIN, BUTTON_2_PIN};
+#elif NUM_PLAYERS == 3
+  Serial.println("Setting up for 3 players");
   const gpio_num_t buttonPins[NUM_PLAYERS] = {BUTTON_1_PIN, BUTTON_2_PIN, BUTTON_3_PIN};
+#endif
+
   for (int i = 0; i < NUM_PLAYERS; i++) {
     Button* btn = new Button(buttonPins[i], false);
     btn->attachPressDownEventCb(&handleButtonPressed, (void*)(intptr_t)i);

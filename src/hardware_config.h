@@ -1,6 +1,6 @@
 #pragma once
 
-#define NUM_PLAYERS 3
+#define NUM_PLAYERS 2
 #define NUM_PHASES 4
 
 #define NUM_RING_LEDS 24

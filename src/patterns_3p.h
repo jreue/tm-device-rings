@@ -4,10 +4,15 @@
 #include "hardware_config.h"
 
 // Patterns for 3-ring setup (72 LEDs total).
-// Ring 1 (right)  = LEDs  0-23
-// Ring 2 (middle) = LEDs 24-47
-// Ring 3 (left)   = LEDs 48-71
-// Clock positions per ring (NUM_RING_LEDS=24): 12=0, 3=6, 6=12, 9=18 (+ring offset)
+// Ring 1 = LEDs 0-23
+// Ring 2 = LEDs 24-47
+// Ring 3 = LEDs 48-71
+
+// Clock positions per ring
+// 12 o'clock = 0
+// 3 o'clock = 6
+// 6 o'clock = 12
+// 9 o'clock = 18
 
 struct MarkerPattern {
     const uint8_t* leds;
@@ -97,7 +102,6 @@ const uint8_t PATTERN_WEAVE_LEDS[] PROGMEM = {
     4,
     5,
 };
-const MarkerPattern PATTERN_WEAVE = {PATTERN_WEAVE_LEDS, sizeof(PATTERN_WEAVE_LEDS)};
 
 const uint8_t PATTERN_WAVES_LOOP_LEDS[] PROGMEM = {
     // R1-3 → R1-9 CW
@@ -182,4 +186,6 @@ const uint8_t PATTERN_WAVES_LOOP_LEDS[] PROGMEM = {
     4,
     5,
 };
+
+const MarkerPattern PATTERN_WEAVE = {PATTERN_WEAVE_LEDS, sizeof(PATTERN_WEAVE_LEDS)};
 const MarkerPattern PATTERN_WAVES_LOOP = {PATTERN_WAVES_LOOP_LEDS, sizeof(PATTERN_WAVES_LOOP_LEDS)};
