@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define NUM_PLAYERS 8
-#define NUM_PHASES 4
+#define NUM_PHASES 6
 
 #define NUM_RING_LEDS 24
 #define NUM_LEDS (NUM_PLAYERS * NUM_RING_LEDS)

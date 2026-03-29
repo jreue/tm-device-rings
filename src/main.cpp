@@ -54,10 +54,9 @@ const unsigned long HIT_EFFECT_TOTAL_MS =
 // Patterns defined in patterns.h
 
 const PhaseConfig phases[NUM_PHASES] = {
-    {SOLO, false, nullptr, 80},
-    {COLLECTIVE, false, &PATTERN_WEAVE, 80},
-    {SOLO, true, nullptr, 50},
-    {COLLECTIVE, false, &PATTERN_WAVES_LOOP, 80},
+    {SOLO, false, nullptr, 80}, {COLLECTIVE, false, &PATTERN_WEAVE, 80},
+    {SOLO, true, nullptr, 50},  {COLLECTIVE, false, &PATTERN_WAVES_LOOP, 80},
+    {SOLO, false, nullptr, 40}, {COLLECTIVE, false, &PATTERN_EVEN_ODD, 60},
 };
 
 const int STATE_NORMAL = 0;
