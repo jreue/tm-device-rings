@@ -11,6 +11,7 @@ uint8_t hubAddress[] = HUB_MAC_ADDRESS;
 EspNowHelper espNowHelper;
 
 CRGB leds[NUM_LEDS];
+CRGB phaseLeds[NUM_PHASE_LEDS];
 
 int currentPhase = 0;
 bool phaseCompleted[NUM_PHASES] = {};
@@ -80,6 +81,8 @@ unsigned long playerEffectStartTime[NUM_PLAYERS] = {};
 
 unsigned long lastMarkerMoveTime = 0;
 
+int phasePlayerCompletedCount[NUM_PHASE_COLS] = {};
+
 void setupESPNow();
 void setupLEDS();
 void setupButtons();
@@ -109,6 +112,7 @@ void playCalibratedEffects();
 
 void handleButtonPressed(void* button_handle, void* usr_data);
 void handleDebugButtonPress();
+void updatePhaseStatusLEDs();
 
 void setup() {
   Serial.begin(115200);
@@ -131,7 +135,8 @@ void setupESPNow() {
 
 void setupLEDS() {
   FastLED.addLeds<WS2812, LED_RING_PIN, GRB>(leds, NUM_LEDS);
-  FastLED.setBrightness(25);
+  FastLED.addLeds<WS2812, LED_PHASE_PIN, GRB>(phaseLeds, NUM_PHASE_LEDS);
+  FastLED.setBrightness(20);
   FastLED.clear(true);
   FastLED.show();
 }
@@ -191,11 +196,15 @@ void handleDebugButtonPress() {
     playerPhaseCompleted[p] = true;
     playerCurrentState[p] = STATE_DONE;
   }
+  phasePlayerCompletedCount[currentPhase] = NUM_PLAYERS;
+  updatePhaseStatusLEDs();
 }
 
 void initGame() {
   currentPhase = 0;
   memset(phaseCompleted, false, sizeof(phaseCompleted));
+  memset(phasePlayerCompletedCount, 0, sizeof(phasePlayerCompletedCount));
+  memset(phaseLeds, 0, sizeof(phaseLeds));
   startPhase(0);
 }
 
@@ -212,6 +221,8 @@ void runGameLoop() {
           playerPhaseCompleted[p] = true;
           playerCurrentState[p] = STATE_HIT;
           playerEffectStartTime[p] = millis();
+          phasePlayerCompletedCount[currentPhase]++;
+          updatePhaseStatusLEDs();
         } else {
           playerMissedPos[p] =
               (isSoloMarker()) ? p * NUM_RING_LEDS + playerMarkerPos[p] : collectiveMarkerPos;
@@ -258,7 +269,7 @@ void runGameLoop() {
 }
 
 void renderGameFrame() {
-  FastLED.clear();
+  memset(leds, 0, sizeof(leds));
 
   // Iterate over players to render target, marker, and hit/miss effects
   for (int p = 0; p < NUM_PLAYERS; p++) {
@@ -400,6 +411,26 @@ bool isCalibrated() {
     }
   }
   return true;
+}
+
+void updatePhaseStatusLEDs() {
+  for (int col = 0; col < NUM_PHASE_COLS; col++) {
+    int count = phasePlayerCompletedCount[col];
+    for (int row = 0; row < NUM_PHASE_ROWS; row++) {
+      int ledIndex = (col % 2 == 0) ? col * NUM_PHASE_ROWS + row
+                                    : col * NUM_PHASE_ROWS + (NUM_PHASE_ROWS - 1 - row);
+      int thresholdYellow = (NUM_PHASE_ROWS - 1 - row) * 2 + 1;
+      int thresholdGreen = (NUM_PHASE_ROWS - 1 - row) * 2 + 2;
+      if (count >= thresholdGreen) {
+        phaseLeds[ledIndex] = CRGB::Green;
+      } else if (count >= thresholdYellow) {
+        phaseLeds[ledIndex] = CRGB::Yellow;
+      } else {
+        phaseLeds[ledIndex] = CRGB::Black;
+      }
+    }
+  }
+  FastLED.show();
 }
 
 void playCalibratedEffects() {

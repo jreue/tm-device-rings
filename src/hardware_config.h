@@ -29,6 +29,11 @@
 // LED Configuration
 // ====================
 #define LED_RING_PIN GPIO_NUM_14
+#define LED_PHASE_PIN GPIO_NUM_13
+
+#define NUM_PHASE_ROWS 4
+#define NUM_PHASE_COLS 12
+#define NUM_PHASE_LEDS (NUM_PHASE_ROWS * NUM_PHASE_COLS)
 
 // Ring positions (LED index 0 = 12 o'clock, increases clockwise)
 #define LED_12_OCLOCK 0
