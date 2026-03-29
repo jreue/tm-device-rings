@@ -108,6 +108,7 @@ void advanceMarkers();
 void playCalibratedEffects();
 
 void handleButtonPressed(void* button_handle, void* usr_data);
+void handleDebugButtonPress();
 
 void setup() {
   Serial.begin(115200);
@@ -175,7 +176,21 @@ void setupButtons() {
 void handleButtonPressed(void* button_handle, void* usr_data) {
   Serial.printf("Button pressed for player %d\n", (int)(intptr_t)usr_data);
   int player = (int)(intptr_t)usr_data;
+#ifdef DEBUG
+  if (player == 0) {
+    handleDebugButtonPress();
+    return;
+  }
+#endif
   playerButtonPressed[player] = true;
+}
+
+void handleDebugButtonPress() {
+  Serial.println("[DEBUG] Skipping phase — marking all players complete");
+  for (int p = 0; p < NUM_PLAYERS; p++) {
+    playerPhaseCompleted[p] = true;
+    playerCurrentState[p] = STATE_DONE;
+  }
 }
 
 void initGame() {

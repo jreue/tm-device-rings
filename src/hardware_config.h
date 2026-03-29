@@ -1,5 +1,7 @@
 #pragma once
 
+#define DEBUG
+
 #define NUM_PLAYERS 8
 #define NUM_PHASES 4
 
