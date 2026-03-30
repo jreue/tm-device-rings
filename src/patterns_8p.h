@@ -794,3 +794,21 @@ const MarkerPattern PATTERN_WEAVE = {PATTERN_WEAVE_LEDS, sizeof(PATTERN_WEAVE_LE
 const MarkerPattern PATTERN_WAVES_LOOP = {PATTERN_WAVES_LOOP_LEDS, sizeof(PATTERN_WAVES_LOOP_LEDS)};
 const MarkerPattern PATTERN_EVEN_ODD = {PATTERN_EVEN_ODD_LEDS, sizeof(PATTERN_EVEN_ODD_LEDS)};
 const MarkerPattern PATTERN_HALVES = {PATTERN_HALVES_LEDS, sizeof(PATTERN_HALVES_LEDS)};
+
+// Simon Says patterns: values are ring indices (0-7), not LED positions.
+// Players must press the button matching the lit ring in sequence.
+
+// PATTERN_SIMON_1: spiral inward from outside (8 steps)
+// R1 -> R8 -> R2 -> R7 -> R3 -> R6 -> R4 -> R5
+const uint8_t PATTERN_SIMON_1_LEDS[] PROGMEM = {
+    0, 7, 1, 6, 2, 5, 3, 4,
+};
+
+// PATTERN_SIMON_2: ascending then partial repeat with jumps (12 steps)
+// R1 -> R2 -> R3 -> R4 -> R5 -> R6 -> R7 -> R8 -> R1 -> R8 -> R4 -> R5
+const uint8_t PATTERN_SIMON_2_LEDS[] PROGMEM = {
+    0, 1, 2, 3, 4, 5, 6, 7, 0, 7, 3, 4,
+};
+
+const MarkerPattern PATTERN_SIMON_1 = {PATTERN_SIMON_1_LEDS, sizeof(PATTERN_SIMON_1_LEDS)};
+const MarkerPattern PATTERN_SIMON_2 = {PATTERN_SIMON_2_LEDS, sizeof(PATTERN_SIMON_2_LEDS)};

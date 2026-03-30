@@ -17,7 +17,8 @@ int currentPhase = 0;
 bool phaseCompleted[NUM_PHASES] = {};
 
 // Phase types
-enum MarkerType { SOLO, COLLECTIVE };
+enum MarkerType { SOLO, COLLECTIVE, SIMON };
+enum SimonState { SIMON_SHOW, SIMON_PAUSE, SIMON_INPUT, SIMON_MISTAKE };
 
 #if NUM_PLAYERS == 2
 #include "patterns_2p.h"
@@ -45,6 +46,9 @@ struct PhaseConfig {
 
 // Game configuration
 const unsigned long MISS_HOLD_MS = 1500;
+const unsigned long SIMON_PAUSE_MS = 300;
+const unsigned long SIMON_MISTAKE_MS = 1500;
+const unsigned long SIMON_HIT_MS = 400;
 const unsigned long HIT_FLASH_ON_MS = 200;
 const unsigned long HIT_FLASH_OFF_MS = 150;
 const int HIT_FLASH_COUNT = 3;
@@ -53,11 +57,29 @@ const unsigned long HIT_EFFECT_TOTAL_MS =
 
 // Patterns defined in patterns.h
 
+// Per-player ring colors — matches physical button colors where possible.
+// Black buttons have no LED equivalent; Cyan and Magenta are used instead.
+const CRGB PLAYER_COLORS[8] = {
+    CRGB::Blue,    // P1 - blue button
+    CRGB::Blue,    // P2 - blue button
+    CRGB::Purple,  // P3 - black button
+    CRGB::Purple,  // P4 - black button
+    CRGB::Red,     // P5 - red button
+    CRGB::Green,   // P6 - green button
+    CRGB::Yellow,  // P7 - yellow button
+    CRGB::White,   // P8 - white button
+};
+
 const PhaseConfig phases[NUM_PHASES] = {
-    {SOLO, false, nullptr, 80}, {COLLECTIVE, true, &PATTERN_WEAVE, 80},
-    {SOLO, true, nullptr, 70},  {COLLECTIVE, true, &PATTERN_WAVES_LOOP, 70},
-    {SOLO, false, nullptr, 60}, {COLLECTIVE, true, &PATTERN_EVEN_ODD, 60},
-    {SOLO, true, nullptr, 50},  {COLLECTIVE, true, &PATTERN_HALVES, 50},
+    // {SOLO, false, nullptr, 80},
+    // {COLLECTIVE, true, &PATTERN_WEAVE, 80},
+    // {SOLO, true, nullptr, 70},
+    // {COLLECTIVE, true, &PATTERN_WAVES_LOOP, 70},
+    // {SOLO, false, nullptr, 60},
+    // {COLLECTIVE, true, &PATTERN_EVEN_ODD, 60},
+    // {SOLO, true, nullptr, 50},
+    // {COLLECTIVE, true, &PATTERN_HALVES, 50},
+    {SIMON, false, &PATTERN_SIMON_1, 800},
 };
 
 const int STATE_NORMAL = 0;
@@ -81,6 +103,13 @@ unsigned long playerEffectStartTime[NUM_PLAYERS] = {};
 
 unsigned long lastMarkerMoveTime = 0;
 
+SimonState simonState = SIMON_SHOW;
+int simonPlayStep = 0;
+int simonInputStep = 0;
+unsigned long simonStepTime = 0;
+int simonLastPressedRing = -1;
+unsigned long simonPressTime = 0;
+
 int phasePlayerCompletedCount[NUM_PHASE_COLS] = {};
 
 void setupESPNow();
@@ -91,6 +120,7 @@ void runGameLoop();
 void renderGameFrame();
 
 void advanceMarkers();
+void runSimonPhase();
 
 void logPhase(int phase);
 void startPhase(int phase);
@@ -98,6 +128,7 @@ void advancePhase();
 
 bool isSoloMarker();
 bool isCollectiveMarker();
+bool isSimonMarker();
 bool isHit(int player);
 bool isPhaseComplete();
 bool isCalibrated();
@@ -192,12 +223,20 @@ void handleButtonPressed(void* button_handle, void* usr_data) {
 
 void handleDebugButtonPress() {
   Serial.println("[DEBUG] Skipping phase — marking all players complete");
-  for (int p = 0; p < NUM_PLAYERS; p++) {
-    playerPhaseCompleted[p] = true;
-    playerCurrentState[p] = STATE_DONE;
+  if (isSimonMarker()) {
+    const MarkerPattern* pattern = phases[currentPhase].pattern;
+    phasePlayerCompletedCount[currentPhase] = pattern->length;
+    updatePhaseStatusLEDs();
+    for (int p = 0; p < NUM_PLAYERS; p++) playerPhaseCompleted[p] = true;
+    advancePhase();
+  } else {
+    for (int p = 0; p < NUM_PLAYERS; p++) {
+      playerPhaseCompleted[p] = true;
+      playerCurrentState[p] = STATE_DONE;
+    }
+    phasePlayerCompletedCount[currentPhase] = NUM_PLAYERS;
+    updatePhaseStatusLEDs();
   }
-  phasePlayerCompletedCount[currentPhase] = NUM_PLAYERS;
-  updatePhaseStatusLEDs();
 }
 
 void initGame() {
@@ -211,6 +250,11 @@ void initGame() {
 void runGameLoop() {
   if (!gameActive)
     return;
+
+  if (isSimonMarker()) {
+    runSimonPhase();
+    return;
+  }
 
   // Iterate over players to transition into hit/miss states based on button presses
   for (int p = 0; p < NUM_PLAYERS; p++) {
@@ -270,6 +314,27 @@ void runGameLoop() {
 
 void renderGameFrame() {
   memset(leds, 0, sizeof(leds));
+
+  if (phases[currentPhase].type == SIMON) {
+    const MarkerPattern* pattern = phases[currentPhase].pattern;
+    if (simonState == SIMON_SHOW) {
+      uint8_t ringIdx = pgm_read_byte(&pattern->leds[simonPlayStep]);
+      fill_solid(&leds[ringIdx * NUM_RING_LEDS], NUM_RING_LEDS, PLAYER_COLORS[ringIdx]);
+    } else if (simonState == SIMON_INPUT) {
+      for (int p = 0; p < NUM_PLAYERS; p++) {
+        leds[p * NUM_RING_LEDS + LED_6_OCLOCK] = LED_TARGET_COLOR;
+      }
+      if (simonLastPressedRing >= 0 && millis() - simonPressTime < SIMON_HIT_MS) {
+        fill_solid(&leds[simonLastPressedRing * NUM_RING_LEDS], NUM_RING_LEDS,
+                   PLAYER_COLORS[simonLastPressedRing]);
+      }
+    } else if (simonState == SIMON_MISTAKE) {
+      fill_solid(leds, NUM_LEDS, LED_MISS_COLOR);
+    }
+    // SIMON_PAUSE: all dark, already cleared by memset
+    FastLED.show();
+    return;
+  }
 
   // Iterate over players to render target, marker, and hit/miss effects
   for (int p = 0; p < NUM_PLAYERS; p++) {
@@ -347,6 +412,14 @@ void startPhase(int phase) {
   collectivePatternIndex = 0;
   const MarkerPattern* pat = phases[phase].pattern;
   collectiveMarkerPos = pat ? pgm_read_byte(&pat->leds[0]) : LED_12_OCLOCK;
+  if (phases[phase].type == SIMON) {
+    simonState = SIMON_SHOW;
+    simonPlayStep = 0;
+    simonInputStep = 0;
+    simonLastPressedRing = -1;
+    simonPressTime = 0;
+    simonStepTime = millis();
+  }
   lastMarkerMoveTime = millis();
   gameActive = true;
 
@@ -370,6 +443,79 @@ bool isSoloMarker() {
 
 bool isCollectiveMarker() {
   return phases[currentPhase].type == COLLECTIVE;
+}
+
+bool isSimonMarker() {
+  return phases[currentPhase].type == SIMON;
+}
+
+void runSimonPhase() {
+  unsigned long now = millis();
+  const MarkerPattern* pattern = phases[currentPhase].pattern;
+  unsigned long speed = phases[currentPhase].speed;
+
+  switch (simonState) {
+    case SIMON_SHOW:
+      if (now - simonStepTime >= speed) {
+        simonStepTime = now;
+        simonState = SIMON_PAUSE;
+      }
+      break;
+
+    case SIMON_PAUSE:
+      if (now - simonStepTime >= SIMON_PAUSE_MS) {
+        simonPlayStep++;
+        if (simonPlayStep >= (int)pattern->length) {
+          simonInputStep = 0;
+          simonState = SIMON_INPUT;
+        } else {
+          simonStepTime = now;
+          simonState = SIMON_SHOW;
+        }
+      }
+      break;
+
+    case SIMON_INPUT:
+      for (int p = 0; p < NUM_PLAYERS; p++) {
+        if (playerButtonPressed[p]) {
+          playerButtonPressed[p] = false;
+          uint8_t expectedRing = pgm_read_byte(&pattern->leds[simonInputStep]);
+          if (p == (int)expectedRing) {
+            simonLastPressedRing = p;
+            simonPressTime = now;
+            simonInputStep++;
+            phasePlayerCompletedCount[currentPhase] = simonInputStep;
+            updatePhaseStatusLEDs();
+            if (simonInputStep >= (int)pattern->length) {
+              for (int pp = 0; pp < NUM_PLAYERS; pp++) {
+                playerPhaseCompleted[pp] = true;
+              }
+              advancePhase();
+              return;
+            }
+          } else {
+            simonStepTime = now;
+            simonState = SIMON_MISTAKE;
+          }
+          break;
+        }
+      }
+      break;
+
+    case SIMON_MISTAKE:
+      if (now - simonStepTime >= SIMON_MISTAKE_MS) {
+        simonPlayStep = 0;
+        simonInputStep = 0;
+        simonLastPressedRing = -1;
+        phasePlayerCompletedCount[currentPhase] = 0;
+        updatePhaseStatusLEDs();
+        simonStepTime = now;
+        simonState = SIMON_SHOW;
+      }
+      break;
+  }
+
+  renderGameFrame();
 }
 
 int getMarkerPos(int player) {
@@ -416,18 +562,30 @@ bool isCalibrated() {
 void updatePhaseStatusLEDs() {
   for (int col = 0; col < NUM_PHASE_COLS; col++) {
     int count = phasePlayerCompletedCount[col];
+    bool colIsSimon = (col < NUM_PHASES && phases[col].type == SIMON);
     for (int row = 0; row < NUM_PHASE_ROWS; row++) {
       int ledIndex = (col % 2 == 0) ? col * NUM_PHASE_ROWS + row
                                     : col * NUM_PHASE_ROWS + (NUM_PHASE_ROWS - 1 - row);
-      int thresholdYellow = (NUM_PHASE_ROWS - 1 - row) * 2 + 1;
-      int thresholdGreen = (NUM_PHASE_ROWS - 1 - row) * 2 + 2;
-      if (count >= thresholdGreen) {
-        phaseLeds[ledIndex] = CRGB::Green;
-      } else if (count >= thresholdYellow) {
-        phaseLeds[ledIndex] = CRGB::Yellow;
+      CRGB color = CRGB::Black;
+      if (colIsSimon) {
+        int thresholdOrange = (NUM_PHASE_ROWS - 1 - row) * 3 + 1;
+        int thresholdYellow = (NUM_PHASE_ROWS - 1 - row) * 3 + 2;
+        int thresholdGreen = (NUM_PHASE_ROWS - 1 - row) * 3 + 3;
+        if (count >= thresholdGreen)
+          color = CRGB::Green;
+        else if (count >= thresholdYellow)
+          color = CRGB::Yellow;
+        else if (count >= thresholdOrange)
+          color = CRGB::Orange;
       } else {
-        phaseLeds[ledIndex] = CRGB::Black;
+        int thresholdYellow = (NUM_PHASE_ROWS - 1 - row) * 2 + 1;
+        int thresholdGreen = (NUM_PHASE_ROWS - 1 - row) * 2 + 2;
+        if (count >= thresholdGreen)
+          color = CRGB::Green;
+        else if (count >= thresholdYellow)
+          color = CRGB::Yellow;
       }
+      phaseLeds[ledIndex] = color;
     }
   }
   FastLED.show();

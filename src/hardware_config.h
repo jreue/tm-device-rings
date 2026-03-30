@@ -1,9 +1,9 @@
 #pragma once
 
-#define DEBUG
+// #define DEBUG
 
 #define NUM_PLAYERS 8
-#define NUM_PHASES 8
+#define NUM_PHASES 1
 
 #define NUM_RING_LEDS 24
 #define NUM_LEDS (NUM_PLAYERS * NUM_RING_LEDS)
