@@ -60,26 +60,26 @@ const unsigned long HIT_EFFECT_TOTAL_MS =
 // Per-player ring colors — matches physical button colors where possible.
 // Black buttons have no LED equivalent; Cyan and Magenta are used instead.
 const CRGB PLAYER_COLORS[8] = {
-    CRGB::Blue,    // P1 - blue button
-    CRGB::Blue,    // P2 - blue button
-    CRGB::Purple,  // P3 - black button
-    CRGB::Purple,  // P4 - black button
-    CRGB::Red,     // P5 - red button
-    CRGB::Green,   // P6 - green button
-    CRGB::Yellow,  // P7 - yellow button
-    CRGB::White,   // P8 - white button
+    CRGB::Purple,  // P1
+    CRGB::Blue,    // P2
+    CRGB::Red,     // P3
+    CRGB::Yellow,  // P4
+    CRGB::Purple,  // P5
+    CRGB::Blue,    // P6
+    CRGB::Green,   // P7
+    CRGB::White,   // P8
 };
 
 const PhaseConfig phases[NUM_PHASES] = {
-    // {SOLO, false, nullptr, 80},
-    // {COLLECTIVE, true, &PATTERN_WEAVE, 80},
+    {SOLO, false, nullptr, 50},
+  //  {COLLECTIVE, true, &PATTERN_WEAVE, 80},
     // {SOLO, true, nullptr, 70},
     // {COLLECTIVE, true, &PATTERN_WAVES_LOOP, 70},
     // {SOLO, false, nullptr, 60},
     // {COLLECTIVE, true, &PATTERN_EVEN_ODD, 60},
     // {SOLO, true, nullptr, 50},
     // {COLLECTIVE, true, &PATTERN_HALVES, 50},
-    {SIMON, false, &PATTERN_SIMON_1, 800},
+    // {SIMON, false, &PATTERN_SIMON_1, 800},
 };
 
 const int STATE_NORMAL = 0;
