@@ -72,9 +72,9 @@ const CRGB PLAYER_COLORS[8] = {
 };
 
 const PhaseConfig phases[NUM_PHASES] = {
-    //{SOLO, false, nullptr, 30, false},
+    {SOLO, false, nullptr, 30, true},
 
-    {COLLECTIVE, true, &PATTERN_WEAVE, 80, true},
+    //{COLLECTIVE, true, &PATTERN_WEAVE, 80, true},
     // {SOLO, true, nullptr, 70,true},
     // {COLLECTIVE, true, &PATTERN_WAVES_LOOP, 70,false},
     // {SOLO, false, nullptr, 60,true},
@@ -100,6 +100,7 @@ bool playerPhaseCompleted[NUM_PLAYERS] = {};
 int playerMarkerPos[NUM_PLAYERS] = {};
 int playerMissedPos[NUM_PLAYERS] = {};
 int playerTargetPos[NUM_PLAYERS] = {};
+bool playerTargetMovePending[NUM_PLAYERS] = {};
 int collectiveMarkerPos = 0;
 int collectivePatternIndex = 0;
 
@@ -275,12 +276,7 @@ void runGameLoop() {
           playerMissedPos[p] =
               (isSoloMarker()) ? p * NUM_RING_LEDS + playerMarkerPos[p] : collectiveMarkerPos;
           if (phases[currentPhase].moveTargetOnMiss) {
-            int newTarget;
-            do {
-              newTarget = random(NUM_RING_LEDS);
-            } while (newTarget == playerTargetPos[p] ||
-                     (isSoloMarker() && newTarget == playerMarkerPos[p]));
-            playerTargetPos[p] = newTarget;
+            playerTargetMovePending[p] = true;
           }
           playerCurrentState[p] = STATE_MISS;
           playerEffectStartTime[p] = millis();
@@ -295,6 +291,15 @@ void runGameLoop() {
     if (playerCurrentState[p] == STATE_HIT && elapsed >= HIT_EFFECT_TOTAL_MS) {
       playerCurrentState[p] = STATE_DONE;
     } else if (playerCurrentState[p] == STATE_MISS && elapsed >= MISS_HOLD_MS) {
+      if (playerTargetMovePending[p]) {
+        playerTargetMovePending[p] = false;
+        int newTarget;
+        do {
+          newTarget = random(NUM_RING_LEDS);
+        } while (newTarget == playerTargetPos[p] ||
+                 (isSoloMarker() && newTarget == playerMarkerPos[p]));
+        playerTargetPos[p] = newTarget;
+      }
       playerCurrentState[p] = STATE_NORMAL;
     }
   }
@@ -421,6 +426,7 @@ void startPhase(int phase) {
   for (int p = 0; p < NUM_PLAYERS; p++) {
     playerMarkerPos[p] = LED_12_OCLOCK;
     playerTargetPos[p] = LED_6_OCLOCK;
+    playerTargetMovePending[p] = false;
     playerPhaseCompleted[p] = false;
     playerCurrentState[p] = STATE_NORMAL;
     playerEffectStartTime[p] = 0;
