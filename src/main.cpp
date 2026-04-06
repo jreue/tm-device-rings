@@ -72,16 +72,16 @@ const CRGB PLAYER_COLORS[8] = {
 };
 
 const PhaseConfig phases[NUM_PHASES] = {
-    {SOLO, false, nullptr, 70, false},
-    {SOLO, false, nullptr, 70, true},
-    //  {COLLECTIVE, true, &PATTERN_WEAVE, 80},
-    // {SOLO, true, nullptr, 70},
-    // {COLLECTIVE, true, &PATTERN_WAVES_LOOP, 70},
-    // {SOLO, false, nullptr, 60},
-    // {COLLECTIVE, true, &PATTERN_EVEN_ODD, 60},
-    // {SOLO, true, nullptr, 50},
-    // {COLLECTIVE, true, &PATTERN_HALVES, 50},
-    // {SIMON, false, &PATTERN_SIMON_1, 800},
+    //{SOLO, false, nullptr, 30, false},
+
+    //  {COLLECTIVE, true, &PATTERN_WEAVE, 80,false},
+    // {SOLO, true, nullptr, 70,true},
+    // {COLLECTIVE, true, &PATTERN_WAVES_LOOP, 70,false},
+    // {SOLO, false, nullptr, 60,true},
+    // {COLLECTIVE, true, &PATTERN_EVEN_ODD, 60,false},
+    // {SOLO, true, nullptr, 50,true},
+    // {COLLECTIVE, true, &PATTERN_HALVES, 50,false},
+    {SIMON, false, &PATTERN_SIMON_1, 500, false},
 };
 
 const int STATE_NORMAL = 0;
@@ -332,7 +332,11 @@ void renderGameFrame() {
       fill_solid(&leds[ringIdx * NUM_RING_LEDS], NUM_RING_LEDS, PLAYER_COLORS[ringIdx]);
     } else if (simonState == SIMON_INPUT) {
       for (int p = 0; p < NUM_PLAYERS; p++) {
-        leds[p * NUM_RING_LEDS + LED_6_OCLOCK] = LED_TARGET_COLOR;
+        int offset = p * NUM_RING_LEDS;
+        leds[offset + LED_12_OCLOCK] = PLAYER_COLORS[p];
+        leds[offset + LED_3_OCLOCK] = PLAYER_COLORS[p];
+        leds[offset + LED_6_OCLOCK] = PLAYER_COLORS[p];
+        leds[offset + LED_9_OCLOCK] = PLAYER_COLORS[p];
       }
       if (simonLastPressedRing >= 0 && millis() - simonPressTime < SIMON_HIT_MS) {
         fill_solid(&leds[simonLastPressedRing * NUM_RING_LEDS], NUM_RING_LEDS,
@@ -487,6 +491,17 @@ void runSimonPhase() {
       break;
 
     case SIMON_INPUT:
+      // If the last step was just completed, wait for the hit flash to finish before advancing
+      if (simonInputStep >= (int)pattern->length) {
+        if (now - simonPressTime >= SIMON_HIT_MS) {
+          for (int pp = 0; pp < NUM_PLAYERS; pp++) {
+            playerPhaseCompleted[pp] = true;
+          }
+          advancePhase();
+          return;
+        }
+        break;
+      }
       for (int p = 0; p < NUM_PLAYERS; p++) {
         if (playerButtonPressed[p]) {
           playerButtonPressed[p] = false;
@@ -497,13 +512,6 @@ void runSimonPhase() {
             simonInputStep++;
             phasePlayerCompletedCount[currentPhase] = simonInputStep;
             updatePhaseStatusLEDs();
-            if (simonInputStep >= (int)pattern->length) {
-              for (int pp = 0; pp < NUM_PLAYERS; pp++) {
-                playerPhaseCompleted[pp] = true;
-              }
-              advancePhase();
-              return;
-            }
           } else {
             simonStepTime = now;
             simonState = SIMON_MISTAKE;
