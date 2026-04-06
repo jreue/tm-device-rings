@@ -42,6 +42,7 @@ struct PhaseConfig {
 
     const MarkerPattern* pattern;  // nullptr = default sequential
     unsigned long speed;           // marker move interval in ms
+    bool moveTargetOnMiss;         // if true, target moves to random pos on miss (SOLO only)
 };
 
 // Game configuration
@@ -71,8 +72,9 @@ const CRGB PLAYER_COLORS[8] = {
 };
 
 const PhaseConfig phases[NUM_PHASES] = {
-    {SOLO, false, nullptr, 50},
-  //  {COLLECTIVE, true, &PATTERN_WEAVE, 80},
+    {SOLO, false, nullptr, 70, false},
+    {SOLO, false, nullptr, 70, true},
+    //  {COLLECTIVE, true, &PATTERN_WEAVE, 80},
     // {SOLO, true, nullptr, 70},
     // {COLLECTIVE, true, &PATTERN_WAVES_LOOP, 70},
     // {SOLO, false, nullptr, 60},
@@ -96,6 +98,7 @@ bool playerPhaseCompleted[NUM_PLAYERS] = {};
 
 int playerMarkerPos[NUM_PLAYERS] = {};
 int playerMissedPos[NUM_PLAYERS] = {};
+int playerTargetPos[NUM_PLAYERS] = {};
 int collectiveMarkerPos = 0;
 int collectivePatternIndex = 0;
 
@@ -270,6 +273,13 @@ void runGameLoop() {
         } else {
           playerMissedPos[p] =
               (isSoloMarker()) ? p * NUM_RING_LEDS + playerMarkerPos[p] : collectiveMarkerPos;
+          if (isSoloMarker() && phases[currentPhase].moveTargetOnMiss) {
+            int newTarget;
+            do {
+              newTarget = random(NUM_RING_LEDS);
+            } while (newTarget == playerTargetPos[p] || newTarget == playerMarkerPos[p]);
+            playerTargetPos[p] = newTarget;
+          }
           playerCurrentState[p] = STATE_MISS;
           playerEffectStartTime[p] = millis();
         }
@@ -339,7 +349,7 @@ void renderGameFrame() {
   // Iterate over players to render target, marker, and hit/miss effects
   for (int p = 0; p < NUM_PLAYERS; p++) {
     int offset = p * NUM_RING_LEDS;
-    int targetPos = offset + LED_6_OCLOCK;
+    int targetPos = offset + playerTargetPos[p];
     unsigned long elapsed = millis() - playerEffectStartTime[p];
 
     switch (playerCurrentState[p]) {
@@ -404,6 +414,7 @@ void startPhase(int phase) {
 
   for (int p = 0; p < NUM_PLAYERS; p++) {
     playerMarkerPos[p] = LED_12_OCLOCK;
+    playerTargetPos[p] = LED_6_OCLOCK;
     playerPhaseCompleted[p] = false;
     playerCurrentState[p] = STATE_NORMAL;
     playerEffectStartTime[p] = 0;
@@ -523,7 +534,7 @@ int getMarkerPos(int player) {
 }
 
 int getTargetPos(int player) {
-  return isSoloMarker() ? LED_6_OCLOCK : player * NUM_RING_LEDS + LED_6_OCLOCK;
+  return isSoloMarker() ? playerTargetPos[player] : player * NUM_RING_LEDS + LED_6_OCLOCK;
 }
 
 int getNextMarkerPos(int p) {
