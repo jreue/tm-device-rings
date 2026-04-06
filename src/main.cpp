@@ -59,7 +59,7 @@ const unsigned long HIT_EFFECT_TOTAL_MS =
 // Patterns defined in patterns.h
 
 // Per-player ring colors — matches physical button colors where possible.
-// Black buttons have no LED equivalent; Cyan and Magenta are used instead.
+// Black buttons have no LED equivalent; Purple is used instead.
 const CRGB PLAYER_COLORS[8] = {
     CRGB::Purple,  // P1
     CRGB::Blue,    // P2
@@ -74,14 +74,15 @@ const CRGB PLAYER_COLORS[8] = {
 const PhaseConfig phases[NUM_PHASES] = {
     //{SOLO, false, nullptr, 30, false},
 
-    //  {COLLECTIVE, true, &PATTERN_WEAVE, 80,false},
+    {COLLECTIVE, true, &PATTERN_WEAVE, 80, true},
     // {SOLO, true, nullptr, 70,true},
     // {COLLECTIVE, true, &PATTERN_WAVES_LOOP, 70,false},
     // {SOLO, false, nullptr, 60,true},
     // {COLLECTIVE, true, &PATTERN_EVEN_ODD, 60,false},
     // {SOLO, true, nullptr, 50,true},
     // {COLLECTIVE, true, &PATTERN_HALVES, 50,false},
-    {SIMON, false, &PATTERN_SIMON_1, 500, false},
+    //{SIMON, false, &PATTERN_SIMON_1, 500, false},
+    //{SIMON, false, &PATTERN_SIMON_2, 400, false},
 };
 
 const int STATE_NORMAL = 0;
@@ -273,11 +274,12 @@ void runGameLoop() {
         } else {
           playerMissedPos[p] =
               (isSoloMarker()) ? p * NUM_RING_LEDS + playerMarkerPos[p] : collectiveMarkerPos;
-          if (isSoloMarker() && phases[currentPhase].moveTargetOnMiss) {
+          if (phases[currentPhase].moveTargetOnMiss) {
             int newTarget;
             do {
               newTarget = random(NUM_RING_LEDS);
-            } while (newTarget == playerTargetPos[p] || newTarget == playerMarkerPos[p]);
+            } while (newTarget == playerTargetPos[p] ||
+                     (isSoloMarker() && newTarget == playerMarkerPos[p]));
             playerTargetPos[p] = newTarget;
           }
           playerCurrentState[p] = STATE_MISS;
@@ -542,7 +544,8 @@ int getMarkerPos(int player) {
 }
 
 int getTargetPos(int player) {
-  return isSoloMarker() ? playerTargetPos[player] : player * NUM_RING_LEDS + LED_6_OCLOCK;
+  return isSoloMarker() ? playerTargetPos[player]
+                        : player * NUM_RING_LEDS + playerTargetPos[player];
 }
 
 int getNextMarkerPos(int p) {
