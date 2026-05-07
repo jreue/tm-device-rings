@@ -72,17 +72,16 @@ const CRGB PLAYER_COLORS[8] = {
 };
 
 const PhaseConfig phases[NUM_PHASES] = {
-    {SOLO, false, nullptr, 30, true},
-
-    //{COLLECTIVE, true, &PATTERN_WEAVE, 80, true},
-    // {SOLO, true, nullptr, 70,true},
-    // {COLLECTIVE, true, &PATTERN_WAVES_LOOP, 70,false},
-    // {SOLO, false, nullptr, 60,true},
-    // {COLLECTIVE, true, &PATTERN_EVEN_ODD, 60,false},
-    // {SOLO, true, nullptr, 50,true},
-    // {COLLECTIVE, true, &PATTERN_HALVES, 50,false},
-    //{SIMON, false, &PATTERN_SIMON_1, 500, false},
-    //{SIMON, false, &PATTERN_SIMON_2, 400, false},
+    {SOLO, true, nullptr, 70, false},
+    {COLLECTIVE, true, &PATTERN_WEAVE, 80, true},
+    {SOLO, true, nullptr, 70, true},
+    {COLLECTIVE, true, &PATTERN_WAVES_LOOP, 70, false},
+    {SOLO, false, nullptr, 60, true},
+    {COLLECTIVE, true, &PATTERN_EVEN_ODD, 60, false},
+    {SOLO, true, nullptr, 30, true},
+    {COLLECTIVE, true, &PATTERN_HALVES, 50, false},
+    {SIMON, false, &PATTERN_SIMON_1, 500, false},
+    {SIMON, false, &PATTERN_SIMON_2, 200, false},
 };
 
 const int STATE_NORMAL = 0;
